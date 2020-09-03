@@ -187,7 +187,7 @@ class test_polspectra(unittest.TestCase):
         self.assertTrue(np.array_equal(pol_spec2.table.as_array(),readin_polspec.table.as_array()),'Table contents are not preserved under FITS read/write')
 
 
-    def test06_expand_scalars_to_columns(self):
+    def test_06_expand_scalars_to_columns(self):
         source_arrays2=make_simdata_2()
         source_arrays2['beam_pa']=30
         source_arrays2['beam_major']=0.2

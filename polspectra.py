@@ -129,12 +129,12 @@ class polarizationspectra:
                             description='Declination',unit='deg')
         
         #frequency array may be 1D (if all sources have same channels)
-        try:
-            _=freq_array[0][0]
+        if get_dimensionality(freq_array) == 2:
             freq_2D=freq_array
-        except:
-            _=freq_array[0]  #If this crashes, then freq_array isn't 1D, which is the minimum dimensionality!
+        elif get_dimensionality(freq_array) == 1:
             freq_2D=[freq_array for i in range(self.Nrows)]
+        else:
+            raise Exception('Frequency column must be channel-wise: at least 1D array!')
         
         
         #This get a bit fussy. To allow mergers of heterogenous tables down the line,
@@ -198,7 +198,7 @@ class polarizationspectra:
         for i in range(self.Nrows):
             N_chan_array[i]=len(freq_column[i])
         N_chan_column=at.Column(data=N_chan_array,name='num_chan',
-                   dtype='int',description='Number of channels',unit='')
+                   dtype='int',description='Number of channels')
 
 
         #Assemble basic table:
@@ -256,29 +256,34 @@ class polarizationspectra:
             epoch_column=at.Column(
                         data=possible_scalar_to_1D(epoch,self.Nrows),
                         name='epoch',dtype='float',
-                        description='Observation Epoch (midpoint, MJD)')
+                        description='Observation Epoch (midpoint, MJD)',unit='days')
             self.table.add_column(epoch_column)
         
         if integration_time != None:
             integration_time_column=at.Column(
                         data=possible_scalar_to_1D(integration_time,self.Nrows),
                         name='integration_time',dtype='float',
-                        description='Integration time (observation duration, s)')
+                        description='Integration time (observation duration, s)',unit='s')
             self.table.add_column(integration_time_column)
             
         if channel_width != None: #Slightly complicated: may be scalar, 1D, 2D.
              #For now, just leave it as 1D or 2D, or expand to 1D if scalar.
              #Whether it's better to have 2D as the default is an open question.
+             if get_dimensionality(channel_width) == 2:
+                 col_dtype='object'
+             else:
+                 col_dtype='float'
+             
              channel_width_column=at.Column(
                         data=possible_scalar_to_1D(channel_width,self.Nrows),
-                        name='channel_width',dtype='object',
+                        name='channel_width',dtype=col_dtype,unit='Hz',
                         description='Channel bandwidth [Hz]')
              self.table.add_column(channel_width_column)
 
         if aperture != None:
             aperture_column=at.Column(
                         data=possible_scalar_to_1D(aperture,self.Nrows),
-                        name='aperture',dtype='float',
+                        name='aperture',dtype='float',unit='deg',
                         description='Integration aperture (diameter, deg)')
             self.table.add_column(aperture_column)
         
@@ -388,7 +393,11 @@ class polarizationspectra:
             else: #Channelized columns
                 subtype=np.result_type(tabcol[0][0]) #get the type of each element in 2D array
                 col_format='P'+pf.column._convert_record2fits(subtype)+'()'
-            pfcol=pf.Column(name=tabcol.name,unit=tabcol.unit.to_string(),
+            if tabcol.unit != None:
+                unit=tabcol.unit.to_string()
+            else:
+                unit=''
+            pfcol=pf.Column(name=tabcol.name,unit=unit,
                             array=tabcol.data,format=col_format)
             fits_columns.append(pfcol)
             col_descriptions.append(tabcol.description)
@@ -523,6 +532,18 @@ def possible_scalar_to_1D(scalar,Nrows):
     return column
 
     
+def get_dimensionality(column):
+    """This function determines the dimensionality of a variable, to see if
+    it contains scalar, 1D, or 2D data. Current version fails on strings."""
+    try:
+        _=column[0]
+        try:
+            _=column[0][0]
+            return 2
+        except: return 1
+    except:
+        return 0
     
+
 
 
