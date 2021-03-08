@@ -43,12 +43,15 @@ class polarizationspectra:
     Different rows can have different data lengths. This could be slightly 
     tricky for numpy. Not sure how Astropy Tables handles this.
     """
+    #TODO: Add a version number to the table format, so that later modifications
+    # can be tracked and accounted for.
     
     def __init__(self):
         self.Nrows = 0  #number of rows in the table
         self.Nsrc = 0  #number of unique sources in the table. A useful property
                      #to access for adding new sources with unique numbers.
         self.table=at.Table()  #Empty table.
+        self.columns=[]
 
     
     def create_from_arrays(self,ra_array,dec_array, freq_array, StokesI,StokesI_error,
@@ -286,6 +289,7 @@ class polarizationspectra:
                         name='aperture',dtype='float',unit='deg',
                         description='Integration aperture (diameter, deg)')
             self.table.add_column(aperture_column)
+        self.columns=self.table.colnames
         
         #Done!
            
@@ -305,6 +309,8 @@ class polarizationspectra:
                         name=name,unit=units,
                         description=description)
         self.table.add_column(new_column)
+        self.columns=self.table.colnames
+
 
     def add_channel_column(self,values,name,description,units):
         """Add a column with a value for every channel in each row.
@@ -332,6 +338,7 @@ class polarizationspectra:
                         description=description)
         new_column[:]=values
         self.table.add_column(new_column)        
+        self.columns=self.table.colnames
 
 
     def __repr__(self):
@@ -423,6 +430,8 @@ class polarizationspectra:
         
         self.Nrows=len(data)
         self.Nsrc=len(np.unique(self.table['source_number']))
+        self.columns=self.table.colnames
+
         hdu.close()
         
 
@@ -467,6 +476,7 @@ class polarizationspectra:
         self.table=merged_table
         self.Nsrc=len(np.unique(self.table['source_number']))
         self.Nrows=self.Nrows+table2.Nrows
+        self.columns=self.table.colnames
 
         
     
