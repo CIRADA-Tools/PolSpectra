@@ -223,53 +223,53 @@ class polarizationspectra:
             StokesV_error_column[:]=StokesV_error
             self.table.add_column(StokesV_error_column)
         
-        if quality != None: #Check quality is 2d?
+        if quality is not None: #Check quality is 2d?
             quality_column=at.Column(name='quality',dtype='object',shape=(),length=self.Nrows,
                             description='Quality flags per channel')
             quality_column[:]=quality
             self.table.add_column(quality_column)
 
-        if quality_meanings != None:
+        if quality_meanings is not None:
             quality_meanings_column=at.Column(
                         data=possible_scalar_to_1D(quality_meanings,self.Nrows),
                         name='quality_meanings',dtype='str',
                         description='Description of quality flag meanings')
             self.table.add_column(quality_meanings_column)
 
-        if source_name != None:
+        if source_name is not None:
             source_name_column=at.Column(data=source_name,name='source_name',dtype='str',
                             description='Source name')
             self.table.add_column(source_name_column)
 
-        if coordinate_system != None:
+        if coordinate_system is not None:
             coordinate_system_column=at.Column(
                         data=possible_scalar_to_1D(coordinate_system,self.Nrows),
                         name='coordinate_system',dtype='str',
                         description='WCS Coordinate system')
             self.table.add_column(coordinate_system_column)
             
-        if telescope != None:
+        if telescope is not None:
             telescope_column=at.Column(
                         data=possible_scalar_to_1D(telescope,self.Nrows),
                         name='telescope',dtype='str',
                         description='Telescope')
             self.table.add_column(telescope_column)
 
-        if epoch != None:
+        if epoch is not None:
             epoch_column=at.Column(
                         data=possible_scalar_to_1D(epoch,self.Nrows),
                         name='epoch',dtype='float',
                         description='Observation Epoch (midpoint, MJD)',unit='days')
             self.table.add_column(epoch_column)
         
-        if integration_time != None:
+        if integration_time is not None:
             integration_time_column=at.Column(
                         data=possible_scalar_to_1D(integration_time,self.Nrows),
                         name='integration_time',dtype='float',
                         description='Integration time (observation duration, s)',unit='s')
             self.table.add_column(integration_time_column)
             
-        if channel_width != None: #Slightly complicated: may be scalar, 1D, 2D.
+        if channel_width is not None: #Slightly complicated: may be scalar, 1D, 2D.
              #For now, just leave it as 1D or 2D, or expand to 1D if scalar.
              #Whether it's better to have 2D as the default is an open question.
              if get_dimensionality(channel_width) == 2:
@@ -283,7 +283,7 @@ class polarizationspectra:
                         description='Channel bandwidth [Hz]')
              self.table.add_column(channel_width_column)
 
-        if aperture != None:
+        if aperture is not None:
             aperture_column=at.Column(
                         data=possible_scalar_to_1D(aperture,self.Nrows),
                         name='aperture',dtype='float',unit='deg',
