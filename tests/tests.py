@@ -14,6 +14,7 @@ import os
 import shutil
 import numpy as np
 import astropy.table as at
+import sys
 
 def make_simdata_1():
     """Create test data arrays with 2 sources. Only basic columns, all as lists."""
@@ -28,7 +29,6 @@ def make_simdata_1():
     simsrc['StokesQ_error']=[[1e-5,1e-5],[1e-5,1.1e-5]]
     simsrc['StokesU']=[[1e-5,1.1e-5],[2e-5,2.1e-5]]
     simsrc['StokesU_error']=[[10e-5,1.1e-5],[1e-5,1.1e-5]]
-    simsrc['unit']='Jy/beam'
     simsrc['beam_major']=[0.01,0.01]
     simsrc['beam_minor']=[0.01,0.01]
     simsrc['beam_pa']=[0,0]
@@ -48,14 +48,13 @@ def make_simdata_2():
     simsrc['StokesQ_error']=[[1e-5,1e-5],[1e-5,1.1e-5,1.2e-5]]
     simsrc['StokesU']=[[1e-5,1.1e-5],[2e-5,2.1e-5,2.2e-5]]
     simsrc['StokesU_error']=[[1e-5,1e-5],[1e-5,1.1e-5,1.2e-5]]
-    simsrc['unit']='Jy/beam'
     simsrc['beam_major']=[0.01,0.01]
     simsrc['beam_minor']=[0.01,0.01]
     simsrc['beam_pa']=[0,0]
     return simsrc
     
 def make_simdata_3():
-    """Make test data that has only 1 source (scalars) and 1D arrays."""
+    """Make test data that has only 1 source (scalars) and 1D lists."""
     simsrc={}
     simsrc['source_number']=[0]
     simsrc['ra']=[15.75]
@@ -67,7 +66,30 @@ def make_simdata_3():
     simsrc['StokesQ_error']=[[1e-5,1e-5]]
     simsrc['StokesU']=[[1e-5,1.1e-5]]
     simsrc['StokesU_error']=[[1e-5,1e-5]]
-    simsrc['unit']='Jy/beam'
+    simsrc['beam_major']=0.01
+    simsrc['beam_minor']=0.01
+    simsrc['beam_pa']=0
+    return simsrc
+
+
+def make_simdata_4():
+    """Data made with numpy arrays. 1D freq input!
+    """
+    simsrc={}
+    simsrc['source_number']=np.array([0,1,3,4,5,6])
+    simsrc['ra']=np.array([0,1,2,3,4,50])
+    simsrc['dec']=np.array([-10,-5,-1,-0.1,60,13])
+    Nsrc=simsrc['source_number'].size
+    Nchan=14 #number of channels
+    simsrc['freq']=np.linspace(800.5e6,1087.5e6,Nchan)
+    x=np.random.random(Nchan) #Generic 1D array for test purposes
+    x_2D=np.repeat(x[np.newaxis,:],Nsrc,axis=0)
+    simsrc['StokesI']=x_2D
+    simsrc['StokesI_error']=x_2D
+    simsrc['StokesQ']=x_2D
+    simsrc['StokesQ_error']=x_2D
+    simsrc['StokesU']=x_2D
+    simsrc['StokesU_error']=x_2D
     simsrc['beam_major']=0.01
     simsrc['beam_minor']=0.01
     simsrc['beam_pa']=0
@@ -75,9 +97,8 @@ def make_simdata_3():
 
 
 
-
 class test_polspectra(unittest.TestCase):
-    def test_01_create_from_arrays(self):
+    def test_01_create_from_lists(self):
         source_arrays=make_simdata_1()
         pol_spec=polspectra.from_arrays(source_arrays['ra'],source_arrays['dec'],
                                 source_arrays['freq'], source_arrays['StokesI'],
@@ -85,30 +106,50 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays['StokesQ_error'],
                                 source_arrays['StokesU'],source_arrays['StokesU_error'],
                                 source_arrays['source_number'],
-                                source_arrays['unit'],source_arrays['beam_major'],
+                                source_arrays['beam_major'],
                                 source_arrays['beam_minor'],source_arrays['beam_pa'])
         self.assertIsInstance(pol_spec,polspectra.polarizationspectra,'Failed to create 2-row simple polarizationspectra.')
-
-    def test_02_creation_from_arrays_is_correct(self):
-        source_arrays=make_simdata_1()
-        pol_spec=polspectra.from_arrays(source_arrays['ra'],source_arrays['dec'],
-                                source_arrays['freq'], source_arrays['StokesI'],
-                                source_arrays['StokesI_error'],source_arrays['StokesQ'],
-                                source_arrays['StokesQ_error'],
-                                source_arrays['StokesU'],source_arrays['StokesU_error'],
-                                source_arrays['source_number'],
-                                source_arrays['unit'],source_arrays['beam_major'],
-                                source_arrays['beam_minor'],source_arrays['beam_pa'])
         self.assertEqual(len(pol_spec),len(source_arrays['ra']),'Simple polarizationspectra contains wrong number of rows.')
         self.assertEqual(pol_spec.Nsrc,len(source_arrays['ra']),'Simple polarizationspectra contains wrong number of sources.')
-        source_arrays['num_chan']=len(source_arrays['freq'][0])
+        source_arrays['Nchan']=len(source_arrays['freq'][0])
         for colname in pol_spec.table.colnames:
+            if colname in ['l','b']: #Galactic coordinate columns are automatically added, so can't be tested.            
+                continue
             try: #For channelized columns, check row by row for equivalence.
                 _=pol_spec[colname][0][0]
                 for i in range(pol_spec.Nsrc):
                     self.assertTrue(np.array_equiv(source_arrays[colname][i],pol_spec[colname][i]),'{} Array not stored properly!'.format(colname))
             except: #For 1D columns, check entire column at once:
                 self.assertTrue(np.array_equiv(source_arrays[colname],pol_spec[colname]),'{} Array not stored properly!'.format(colname))
+
+
+    def test_02_simple_create_from_arrays(self):
+        source_arrays=make_simdata_4()
+        pol_spec=polspectra.from_arrays(source_arrays['ra'],source_arrays['dec'],
+                                source_arrays['freq'], source_arrays['StokesI'],
+                                source_arrays['StokesI_error'],source_arrays['StokesQ'],
+                                source_arrays['StokesQ_error'],
+                                source_arrays['StokesU'],source_arrays['StokesU_error'],
+                                source_arrays['source_number'],
+                                source_arrays['beam_major'],
+                                source_arrays['beam_minor'],source_arrays['beam_pa'])
+        self.assertIsInstance(pol_spec,polspectra.polarizationspectra,'Failed to create table from arrays.')
+        self.assertEqual(len(pol_spec),len(source_arrays['ra']),'Simple polarizationspectra contains wrong number of rows.')
+        self.assertEqual(pol_spec.Nsrc,len(source_arrays['ra']),'Simple polarizationspectra contains wrong number of sources.')
+        source_arrays['Nchan']=np.ones(pol_spec.Nrows)*source_arrays['freq'].size
+        for colname in pol_spec.table.colnames:
+            if colname in ['l','b','freq']: #Galactic coordinate columns are automatically added, so can't be tested.            
+                continue
+            try: #For channelized columns, check row by row for equivalence.
+                _=pol_spec[colname][0][0]
+                for i in range(pol_spec.Nsrc):
+                    if 'beam' in colname: #Beam column inputs are 1D, but table stores as 2D
+                        self.assertTrue(np.array_equiv(source_arrays[colname],pol_spec[colname][i]),'{} Array not stored properly!'.format(colname))
+                    else:
+                        self.assertTrue(np.array_equiv(source_arrays[colname][i],pol_spec[colname][i]),'{} Array not stored properly!'.format(colname))
+            except: #For 1D columns, check entire column at once:
+                self.assertTrue(np.array_equiv(source_arrays[colname],pol_spec[colname]),'{} array not stored properly!'.format(colname))
+        self.assertTrue(np.array_equiv(pol_spec['freq'][-1],source_arrays['freq']),'Frequency array not expanded from 1D properly')
 
 
     def test_03_creation_from_variable_length_arrays(self):
@@ -120,14 +161,19 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays['StokesQ_error'],
                                 source_arrays['StokesU'],source_arrays['StokesU_error'],
                                 source_arrays['source_number'],
-                                source_arrays['unit'],source_arrays['beam_major'],
+                                source_arrays['beam_major'],
                                 source_arrays['beam_minor'],source_arrays['beam_pa'])
+
         self.assertIsInstance(pol_spec,polspectra.polarizationspectra,'Failed to create 2-row different-channels polarizationspectra.')
         self.assertEqual(len(pol_spec),len(source_arrays['ra']),'Simple polarizationspectra contains wrong number of rows.')
         self.assertEqual(pol_spec.Nsrc,len(source_arrays['ra']),'Simple polarizationspectra contains wrong number of sources.')
-        source_arrays['num_chan']=[len(source_arrays['freq'][i]) for i in range(len(source_arrays['ra']))]
+        source_arrays['Nchan']=[len(source_arrays['freq'][i]) for i in range(len(source_arrays['ra']))]
         for colname in pol_spec.table.colnames:
-            self.assertTrue(np.array_equiv(source_arrays[colname],pol_spec[colname]),'{} Array not stored properly!'.format(colname))
+            if colname in ['l','b','freq','beam_major','beam_minor','beam_pa']: 
+              #Galactic coordinate columns are automatically added, so can't be tested.   
+              #Also beam arrays are problematic to compare in this mode.
+                continue
+            self.assertTrue(np.array_equiv(source_arrays[colname],pol_spec[colname]),'{} array not stored properly!'.format(colname))
         
     
     
@@ -140,7 +186,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays1['StokesQ_error'],
                                 source_arrays1['StokesU'],source_arrays1['StokesU_error'],
                                 source_arrays1['source_number'],
-                                source_arrays1['unit'],source_arrays1['beam_major'],
+                                source_arrays1['beam_major'],
                                 source_arrays1['beam_minor'],source_arrays1['beam_pa'])
         source_arrays2=make_simdata_2()
         pol_spec2=polspectra.from_arrays(source_arrays2['ra'],source_arrays2['dec'],
@@ -149,7 +195,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'])
         #Create merged version with concatenated source lists 
         #(confirm number of sources matches expectations)
@@ -176,7 +222,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'])
         pol_spec2.write_FITS('./tests/simdata/test05.fits')
         self.assertTrue(os.path.exists('./tests/simdata/test05.fits'),'FITS file has not been saved!')
@@ -187,36 +233,24 @@ class test_polspectra(unittest.TestCase):
         self.assertTrue(np.array_equal(pol_spec2.table.as_array(),readin_polspec.table.as_array()),'Table contents are not preserved under FITS read/write')
 
 
-    def test_06_expand_scalars_to_columns(self):
-        source_arrays2=make_simdata_2()
-        source_arrays2['beam_pa']=30
-        source_arrays2['beam_major']=0.2
-        source_arrays2['beam_minor']=0.1
-        pol_spec2=polspectra.from_arrays(source_arrays2['ra'],source_arrays2['dec'],
-                                source_arrays2['freq'], source_arrays2['StokesI'],
-                                source_arrays2['StokesI_error'],source_arrays2['StokesQ'],
-                                source_arrays2['StokesQ_error'],
-                                source_arrays2['StokesU'],source_arrays2['StokesU_error'],
-                                source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
-                                source_arrays2['beam_minor'],source_arrays2['beam_pa'])
-        self.assertIsInstance(pol_spec2,polspectra.polarizationspectra,'Failed to convert scalars to columns.')
-        self.assertTrue(np.array_equal(pol_spec2['beam_pa'].data,np.repeat(source_arrays2['beam_pa'],pol_spec2.Nrows)),'Scalar was not accurately converted to column')
-
-    
-    def test_07_optional_columns(self):
+   
+    def test_06_optional_columns(self):
         #Test that optional columns can be entered properly.
         source_arrays2=make_simdata_2()
         source_arrays2['StokesV']=[[1e-5,-1.1e-5],[2e-5,-2.1e-5,2.2e-5]]
         source_arrays2['StokesV_error']=[[1e-5,1e-5],[1e-5,2.1e-5,1.2e-5]]
         source_arrays2['quality']=[[0,0],[0,1,0]]
         source_arrays2['quality_meanings']='0=good, 1=RFI'
-        source_arrays2['source_name']=['Source 1','Source 2']
-        source_arrays2['coordinate_system']='FK5'
+        source_arrays2['ionosphere']='None'
+        source_arrays2['cat_id']=['Source 1','Source 2']
+        source_arrays2['dataref']='None'
         source_arrays2['telescope']='Simulation'
         source_arrays2['epoch']=59003.45
         source_arrays2['integration_time']=1.0
+        source_arrays2['interval']=2.0
+        source_arrays2['leakage']=0.01
         source_arrays2['channel_width']=1e6
+        source_arrays2['flux_type']='Integrated'
         source_arrays2['aperture']=0.01
         pol_spec2=polspectra.from_arrays(source_arrays2['ra'],source_arrays2['dec'],
                                 source_arrays2['freq'], source_arrays2['StokesI'],
@@ -224,28 +258,67 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'],
                                 StokesV=source_arrays2['StokesV'],
                                 StokesV_error=source_arrays2['StokesV_error'],
                                 quality=source_arrays2['quality'],
                                 quality_meanings=source_arrays2['quality_meanings'],
-                                source_name=source_arrays2['source_name'],
-                                coordinate_system=source_arrays2['coordinate_system'],
+                                ionosphere=source_arrays2['ionosphere'],
+                                cat_id=source_arrays2['cat_id'],
+                                dataref=source_arrays2['dataref'],
                                 telescope=source_arrays2['telescope'],
                                 epoch=source_arrays2['epoch'],
                                 integration_time=source_arrays2['integration_time'],
+                                interval=source_arrays2['interval'],
+                                leakage=source_arrays2['leakage'],
                                 channel_width=source_arrays2['channel_width'],
-                                aperture=source_arrays2['aperture'])
-        source_arrays2['num_chan']=[len(source_arrays2['freq'][i]) for i in range(pol_spec2.Nrows)]
-        for colname in pol_spec2.table.colnames:
+                                aperture=source_arrays2['aperture'],
+                                flux_type=source_arrays2['flux_type'])
+        source_arrays2['Nchan']=[len(source_arrays2['freq'][i]) for i in range(pol_spec2.Nrows)]
+        for colname in ['StokesV','StokesV_error','quality','quality_meanings',
+                        'ionosphere','cat_id','dataref','telescope','epoch',
+                        'integration_time','interval','flux_type','aperture']:
             try: #For channelized columns, check row by row for equivalence.
                 _=pol_spec2[colname][0][0]
                 for i in range(pol_spec2.Nsrc):
                     self.assertTrue(np.array_equiv(source_arrays2[colname][i],pol_spec2[colname][i]),'{} Array not stored properly!'.format(colname))
             except: #For 1D columns, check entire column at once:
                 self.assertTrue(np.array_equiv(source_arrays2[colname],pol_spec2[colname]),'{} Array not stored properly!'.format(colname))
+        for colname in ['leakage','channel_width']:
+            for i in range(pol_spec2.Nsrc):
+                x=at.Column(dtype='object',length=len(source_arrays2['ra']))
+                x[:]=[ [x] for x in polspectra._possible_scalar_to_1D(source_arrays2[colname],len(source_arrays2['ra']))]
+                self.assertTrue(np.array_equiv(x,pol_spec2[colname]),'{} Array not stored properly!'.format(colname))
 
+    def test_07_expand_scalars_to_columns(self):
+        #Test that beam values get expanded from scalars to arrays.
+        #Test that scalar string column (ionosphere) gets expanded to array.
+        #Test that float column (epoch) gets expanded to array.
+        source_arrays2=make_simdata_2()
+        source_arrays2['beam_pa']=30
+        source_arrays2['beam_major']=0.2
+        source_arrays2['beam_minor']=0.1
+        source_arrays2['ionosphere']='None'
+        source_arrays2['epoch']=1.001
+        pol_spec2=polspectra.from_arrays(source_arrays2['ra'],source_arrays2['dec'],
+                                source_arrays2['freq'], source_arrays2['StokesI'],
+                                source_arrays2['StokesI_error'],source_arrays2['StokesQ'],
+                                source_arrays2['StokesQ_error'],
+                                source_arrays2['StokesU'],source_arrays2['StokesU_error'],
+                                source_arrays2['source_number'],
+                                source_arrays2['beam_major'],
+                                source_arrays2['beam_minor'],source_arrays2['beam_pa'],
+                                ionosphere=source_arrays2['ionosphere'],
+                                epoch=source_arrays2['epoch'])
+        self.assertIsInstance(pol_spec2,polspectra.polarizationspectra,'Failed to generate output when converting scalars to columns.')
+        self.assertTrue(pol_spec2['beam_pa'].data[-1]==[source_arrays2['beam_pa']],
+                        'Beam columns were not accurately converted to column')
+        self.assertTrue(pol_spec2['ionosphere'][-1]==source_arrays2['ionosphere'],
+                        "String scalar not successfully expanded to column.")
+        self.assertTrue(pol_spec2['epoch'][-1]==source_arrays2['epoch'],
+                        "Float scalar not successfully expanded to column.")
+ 
     
     
     def test_08_unspecified_columns(self):
@@ -258,7 +331,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'])
         scalar=7.0
         pol_spec2.add_column(values=scalar,name='scalar_column',
@@ -315,7 +388,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays1['StokesQ_error'],
                                 source_arrays1['StokesU'],source_arrays1['StokesU_error'],
                                 source_arrays1['source_number'],
-                                source_arrays1['unit'],source_arrays1['beam_major'],
+                                source_arrays1['beam_major'],
                                 source_arrays1['beam_minor'],source_arrays1['beam_pa'])
         self.assertIsInstance(pol_spec1,polspectra.polarizationspectra,'Failed to create 1-row simple polarizationspectra.')
         
@@ -327,7 +400,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'])
         pol_spec_merge=pol_spec1.copy()
         pol_spec_merge.merge_tables(pol_spec2,merge_type='exact',source_numbers='concat')
@@ -347,9 +420,9 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays1['StokesQ_error'],
                                 source_arrays1['StokesU'],source_arrays1['StokesU_error'],
                                 source_arrays1['source_number'],
-                                source_arrays1['unit'],source_arrays1['beam_major'],
+                                source_arrays1['beam_major'],
                                 source_arrays1['beam_minor'],source_arrays1['beam_pa'],
-                                telescope=source_arrays1['telescope'],source_name=source_arrays1['source_name'])
+                                telescope=source_arrays1['telescope'],cat_id=source_arrays1['source_name'])
         source_arrays2=make_simdata_1()
         source_arrays2['telescope']='Simulation long string'
         source_arrays2['source_name']=['Source 1 with long name','Source 2 with long name']
@@ -359,15 +432,15 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'],
-                                telescope=source_arrays2['telescope'],source_name=source_arrays2['source_name'])
+                                telescope=source_arrays2['telescope'],cat_id=source_arrays2['source_name'])
         pol_spec_merge=pol_spec1.copy()
         pol_spec_merge.merge_tables(pol_spec2,merge_type='exact',source_numbers='concat')
         self.assertIsInstance(pol_spec_merge,polspectra.polarizationspectra,'Failed to create merged table with different string lengths.')
         self.assertEqual(pol_spec_merge.Nsrc,pol_spec1.Nsrc+pol_spec2.Nsrc,'Merged (concat) version does not have expected number of rows!')
         self.assertEqual(pol_spec_merge['telescope'][2],source_arrays2['telescope'],'Merged string column has incorrect entries!')
-        self.assertEqual(pol_spec_merge['source_name'][2],source_arrays2['source_name'][0],'Merged string column has incorrect entries!')
+        self.assertEqual(pol_spec_merge['cat_id'][2],source_arrays2['source_name'][0],'Merged string column has incorrect entries!')
         
         
 
@@ -380,10 +453,10 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays1['StokesQ_error'],
                                 source_arrays1['StokesU'],source_arrays1['StokesU_error'],
                                 source_arrays1['source_number'],
-                                source_arrays1['unit'],source_arrays1['beam_major'],
+                                source_arrays1['beam_major'],
                                 source_arrays1['beam_minor'],source_arrays1['beam_pa'])
         self.assertIsInstance(pol_spec1[0],polspectra.polarizationspectra,'Single-row selection does not return polarizationspectra object.')
-        self.assertIsInstance(pol_spec1['num_chan'],at.column.Column,'Column access does not return astropy.table Column object!')
+        self.assertIsInstance(pol_spec1['Nchan'],at.column.Column,'Column access does not return astropy.table Column object!')
         
         #Testing source extraction and reindexing:
         source_arrays2=make_simdata_1()
@@ -393,7 +466,7 @@ class test_polspectra(unittest.TestCase):
                                 source_arrays2['StokesQ_error'],
                                 source_arrays2['StokesU'],source_arrays2['StokesU_error'],
                                 source_arrays2['source_number'],
-                                source_arrays2['unit'],source_arrays2['beam_major'],
+                                source_arrays2['beam_major'],
                                 source_arrays2['beam_minor'],source_arrays2['beam_pa'])
         pol_spec_merge=pol_spec1.copy()
         pol_spec_merge.merge_tables(pol_spec2,merge_type='exact',source_numbers='concat')
@@ -404,11 +477,54 @@ class test_polspectra(unittest.TestCase):
         disordered_subselection.renumber_sources()
         self.assertTrue(np.array_equiv(disordered_subselection['source_number'],range(len(disordered_subselection))),'Attempt at re-ordering source numbers has failed!')
 
+
+    def test_12_renumbering_and_crossmatching_sources(self):
+        #Testing functions for renumbering sources: renumbering to sequential,
+        #and grouping based on cross-matching position.
+        
+        source_arrays2=make_simdata_4()
+        pol_spec2=polspectra.from_arrays(source_arrays2['ra'],source_arrays2['dec'],
+                                source_arrays2['freq'], source_arrays2['StokesI'],
+                                source_arrays2['StokesI_error'],source_arrays2['StokesQ'],
+                                source_arrays2['StokesQ_error'],
+                                source_arrays2['StokesU'],source_arrays2['StokesU_error'],
+                                source_arrays2['source_number'],
+                                source_arrays2['beam_major'],
+                                source_arrays2['beam_minor'],source_arrays2['beam_pa'])
+        self.assertTrue(np.array_equiv(pol_spec2['source_number'],[0,1,3,4,5,6]) ,
+                        "Test inputs have changed! Test needs to be fixed")
+        pol_spec2.renumber_sources()
+        self.assertTrue(np.array_equiv(pol_spec2['source_number'],[0,1,2,3,4,5]) ,
+                        "Renumbering sources not following expectations.")
+        pol_spec2.crossmatch_sources(6,consecutive=False)
+        self.assertTrue(np.array_equiv(pol_spec2['source_number'],[0,0,0,0,4,5]) ,
+                        "Crossmatching sources not following expectations.")
+        pol_spec2.renumber_sources()
+        self.assertTrue(np.array_equiv(pol_spec2['source_number'],[0,0,0,0,1,2]) ,
+                        "Renumbering sources after crossmatching not following expectations.")
+        pol_spec2=polspectra.from_arrays(source_arrays2['ra'],source_arrays2['dec'],
+                                source_arrays2['freq'], source_arrays2['StokesI'],
+                                source_arrays2['StokesI_error'],source_arrays2['StokesQ'],
+                                source_arrays2['StokesQ_error'],
+                                source_arrays2['StokesU'],source_arrays2['StokesU_error'],
+                                source_arrays2['source_number'],
+                                source_arrays2['beam_major'],
+                                source_arrays2['beam_minor'],source_arrays2['beam_pa'])
+        pol_spec2.crossmatch_sources(6,consecutive=True)
+        self.assertTrue(np.array_equiv(pol_spec2['source_number'],[0,0,0,0,1,2]) ,
+                        "Crossmatching consecutive functionality not following expectations.")
+
+
+
+
     
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     os.chdir('../')
+    sys.path.append('./')
     import polspectra
+
+
 
     #Clean up in preparation for tests:    
     if os.path.exists('tests/simdata'):
