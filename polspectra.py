@@ -139,9 +139,9 @@ class polarizationspectra:
         dec_column=at.Column(data=coordinates.icrs.dec.deg,name='dec',
                             description='Declination',unit='deg')
         glon_column=at.Column(data=coordinates.galactic.l.deg,name='l',
-                            description='Right Ascension',unit='deg')
+                            description='Galactic Longitude',unit='deg')
         glat_column=at.Column(data=coordinates.galactic.b.deg,name='b',
-                            description='Declination',unit='deg')
+                            description='Galactic Latitude',unit='deg')
         
         
         #frequency array may be 1D (if all sources have same channels), 
@@ -162,25 +162,25 @@ class polarizationspectra:
                             description='Channel Frequency',unit='Hz')
         freq_column[:]=[x for x in freq_2D]
     
-        StokesI_column=at.Column(name='StokesI',dtype='object',shape=(),length=self.Nrows,
+        StokesI_column=at.Column(name='stokesI',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes I per channel')
         StokesI_column[:]=[x for x in StokesI]
 
-        StokesI_error_column=at.Column(name='StokesI_error',shape=(),length=self.Nrows,
+        StokesI_error_column=at.Column(name='stokesI_error',shape=(),length=self.Nrows,
                            dtype='object',description='StokesI error per channel')
         StokesI_error_column[:]=[x for x in StokesI_error]
 
-        StokesQ_column=at.Column(name='StokesQ',dtype='object',shape=(),length=self.Nrows,
+        StokesQ_column=at.Column(name='stokesQ',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes Q per channel')
         StokesQ_column[:]=[x for x in StokesQ]
-        StokesQ_error_column=at.Column(name='StokesQ_error',shape=(),length=self.Nrows,
+        StokesQ_error_column=at.Column(name='stokesQ_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes Q error per channel')
         StokesQ_error_column[:]=[x for x in StokesQ_error]
 
-        StokesU_column=at.Column(name='StokesU',dtype='object',shape=(),length=self.Nrows,
+        StokesU_column=at.Column(name='stokesU',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes U per channel')
         StokesU_column[:]=[x for x in StokesU]
-        StokesU_error_column=at.Column(name='StokesU_error',shape=(),length=self.Nrows,
+        StokesU_error_column=at.Column(name='stokesU_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes U error per channel')
         StokesU_error_column[:]=[x for x in StokesU_error]
 
@@ -233,12 +233,12 @@ class polarizationspectra:
                              Nchan_column])
         #Now adding the optional columns:
         if StokesV is not None: #Check that both Stokes V and error are supplied?
-            StokesV_column=at.Column(name='StokesV',dtype='object',shape=(),length=self.Nrows,
+            StokesV_column=at.Column(name='stokesV',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes V per channel')
             StokesV_column[:]=[x for x in StokesV]
             self.table.add_column(StokesV_column)
 
-            StokesV_error_column=at.Column(name='StokesV_error',shape=(),length=self.Nrows,
+            StokesV_error_column=at.Column(name='stokesV_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes V error per channel')
             StokesV_error_column[:]=[x for x in StokesV_error]
             self.table.add_column(StokesV_error_column)
