@@ -13,6 +13,7 @@ import numpy as np
 import astropy.io.fits as pf
 import astropy.table as at
 import astropy.coordinates as ac
+import astropy.io.votable as vot
 
 
 
@@ -48,6 +49,7 @@ class polarizationspectra:
                      #to access for adding new sources with unique numbers.
         self.table=at.Table()  #Empty table.
         self.columns=[]  #A convnient list of column names (as strings)
+        self.ucds={}  #Dict of column UCDs.
         self.table.meta['VERSION']=0.2  
         #Version 0.2: updated after first round of coauthor comments
         #             New columns, new functions for quality control and such.
@@ -221,7 +223,6 @@ class polarizationspectra:
         Nchan_column=at.Column(data=Nchan_array,name='Nchan',
                    dtype='int',description='Number of channels')
 
-
         #Assemble basic table:
         self.table=at.Table([source_number_column,ra_column,dec_column,
                              glon_column, glat_column,
@@ -231,23 +232,46 @@ class polarizationspectra:
                              StokesU_column,StokesU_error_column,
                              beam_major_column,beam_minor_column,beam_pa_column,
                              Nchan_column])
+        #Store UCDs. Using a dict to keep relationship between column name and UCD.
+        self.ucds={'source_number':'meta.id;meta.main',
+                   'ra':'pos.eq.ra',
+                   'dec':'pos.eq.dec',
+                   'l':'pos.galactic.lon',
+                   'b':'pos.galactic.lat',
+                   'freq':'em.freq',
+                   'stokesI':'phot.flux.density;phys.polarization.stokes.I',
+                   'stokesI_error':'stat.error;phot.flux.density;phys.polarization.stokes.I',
+                   'stokesQ':'phot.flux.density;phys.polarization.stokes.Q',
+                   'stokesQ_error':'stat.error;phot.flux.density;phys.polarization.stokes.Q',
+                   'stokesU':'phot.flux.density;phys.polarization.stokes.U',
+                   'stokesU_error':'stat.error;phot.flux.density;phys.polarization.stokes.U',
+                   'beam_major':'pos.angResolution;instr.beam;phys.angSize.smajAxis',
+                   'beam_minor':'pos.angResolution;instr.beam;phys.angSize.sminAxis',
+                   'beam_pa':'pos.angResolution;instr.beam;pos.posAng',
+                   'Nchan':''
+                   }
+        
+        
         #Now adding the optional columns:
         if StokesV is not None: #Check that both Stokes V and error are supplied?
             StokesV_column=at.Column(name='stokesV',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes V per channel')
             StokesV_column[:]=[x for x in StokesV]
             self.table.add_column(StokesV_column)
+            self.ucds['stokesV']='phot.flux.density;phys.polarization.stokes.V'
 
             StokesV_error_column=at.Column(name='stokesV_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes V error per channel')
             StokesV_error_column[:]=[x for x in StokesV_error]
             self.table.add_column(StokesV_error_column)
+            self.ucds['stokesV_error']='stat.error;phot.flux.density;phys.polarization.stokes.V'
         
         if quality is not None: #Check quality is 2d?
             quality_column=at.Column(name='quality',dtype='object',shape=(),length=self.Nrows,
                             description='Quality flags per channel')
             quality_column[:]=[x for x in quality]
             self.table.add_column(quality_column)
+            self.ucds['quality']='meta.flag.qual'
 
         if quality_meanings is not None:
             quality_meanings_column=at.Column(
@@ -255,6 +279,7 @@ class polarizationspectra:
                         name='quality_meanings',dtype='str',
                         description='Description of quality flag meanings')
             self.table.add_column(quality_meanings_column)
+            self.ucds['quality_meanings']='meta.note'
             
         if ionosphere is not None:
             ionosphere_column=at.Column(
@@ -262,18 +287,21 @@ class polarizationspectra:
                         name='ionosphere',dtype='str',
                         description='Ionospheric correction method')
             self.table.add_column(ionosphere_column)
+            self.ucds['ionosphere']='meta.note'
         
 
         if cat_id is not None:
             source_name_column=at.Column(data=cat_id,name='cat_id',dtype='str',
                             description='Source name')
             self.table.add_column(source_name_column)
+            self.ucds['cat_id']='meta.id'
 
         if dataref is not None:
             dataref_column=at.Column(data=_possible_scalar_to_1D(dataref,self.Nrows),
                                          name='dataref',dtype='str',
                             description='Reference to data paper')
             self.table.add_column(dataref_column)
+            self.ucds['dataref']='meta.bib'
             
         if telescope is not None:
             telescope_column=at.Column(
@@ -281,13 +309,15 @@ class polarizationspectra:
                         name='telescope',dtype='str',
                         description='Telescope')
             self.table.add_column(telescope_column)
+            self.ucds['telescope']='instr.tel'
 
         if epoch is not None:
             epoch_column=at.Column(
                         data=_possible_scalar_to_1D(epoch,self.Nrows),
                         name='epoch',dtype='float',
-                        description='Observation Epoch (midpoint, MJD)',unit='days')
+                        description='Observation Epoch (midpoint, MJD)',unit='d')
             self.table.add_column(epoch_column)
+            self.ucds['epoch']='time.epoch'
         
         if integration_time is not None:
             integration_time_column=at.Column(
@@ -295,6 +325,7 @@ class polarizationspectra:
                         name='integration_time',dtype='float',
                         description='Integration time (observation duration, s)',unit='s')
             self.table.add_column(integration_time_column)
+            self.ucds['integration_time']='time.duration;obs.exposure'
             
         if interval is not None:
             interval_column=at.Column(
@@ -302,6 +333,7 @@ class polarizationspectra:
                         name='interval',dtype='float',
                         description='Interval of observation (days)',unit='d')
             self.table.add_column(interval_column)
+            self.ucds['interval']='time.interval'
 
 
         if leakage is not None: #Like the beam columns, could be scalar, 1D, or 2D.
@@ -311,6 +343,7 @@ class polarizationspectra:
                         description='Estimated leakage fraction')
              leakage_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(leakage,self.Nrows)] 
              self.table.add_column(leakage_column)
+             self.ucds['leakage']='phys.polarization.linear'
 
 
         if channel_width is not None:  #Like the beam columns, could be scalar, 1D, or 2D.
@@ -321,6 +354,7 @@ class polarizationspectra:
                         description='Channel bandwidth [Hz]')
              channel_width_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(channel_width,self.Nrows)] 
              self.table.add_column(channel_width_column)
+             self.ucds['channel_width']='em.freq;instr.bandwidth'
 
 
         if flux_type is not None:
@@ -329,6 +363,7 @@ class polarizationspectra:
                         name='flux_type',dtype='str',
                         description='Stokes extraction method')
             self.table.add_column(flux_type_column)
+            self.ucds['flux_type']='meta.note'
 
 
         if aperture is not None:
@@ -337,13 +372,14 @@ class polarizationspectra:
                         name='aperture',dtype='float',unit='deg',
                         description='Integration aperture (diameter, deg)')
             self.table.add_column(aperture_column)
+            self.ucds['aperture']='phys.angSize'
 
         #Set list of column names.        
         self.columns=self.table.colnames
         #Done!
            
         
-    def add_column(self,values,name,description,units=''):
+    def add_column(self,values,name,description,units='',ucd=''):
         """Add a column with a single value per row, or a scalar.
         Parameters:
             values : scalar or array-like
@@ -353,16 +389,21 @@ class polarizationspectra:
             description : str
                 Description of the column contents (human readable)
             units : str
-                Physical unit of the column quantity, if any"""
+                Physical unit of the column quantity, if any (optional)
+            ucd : str
+                UCD code for the column, if any (optional; UCD codes can be found at
+                     https://www.ivoa.net/documents/UCD1+/20210616/index.html )
+            """
         new_column=at.Column(
                         data=_possible_scalar_to_1D(values,self.Nrows),
                         name=name,unit=units,
                         description=description)
         self.table.add_column(new_column)
         self.columns=self.table.colnames
+        self.ucds[name]=ucd
 
 
-    def add_channel_column(self,values,name,description,units):
+    def add_channel_column(self,values,name,description,units='',ucd=''):
         """Add a column with a value for every channel in each row.
         Parameters:
             values : 2D array-like
@@ -387,6 +428,7 @@ class polarizationspectra:
         new_column[:]=[x for x in values]
         self.table.add_column(new_column)        
         self.columns=self.table.colnames
+        self.ucds[name]=ucd
 
 
     def __repr__(self):
@@ -420,6 +462,8 @@ class polarizationspectra:
             polspec.table=val
             polspec.Nrows=len(val)
             polspec.Nsrc=len(np.unique(val['source_number']))
+            polspec.columns=val.colnames
+            polspec.ucds=self.ucds
             return polspec
         else:
             return val
@@ -487,6 +531,39 @@ class polarizationspectra:
         hdu.close()
         
 
+
+    def write_VOTable(self,filename):
+        """Write the polspectra to a VOTable (.xml) file. Note that this will
+        automatically overwrite any existing file with the same name.
+        Parameters:
+            filename : str
+            Name and relative path of the file to save to.
+        
+        """
+        VOtable=vot.from_table(self.table)
+        VOtable.description='PolSpectra'
+        VOtable.coordinate_systems.append(vot.tree.CooSys(ID='equatorial_coordinates',system='ICRS',epoch='J2000.0'))
+        tab=VOtable.get_first_table()
+        for field in tab.fields:
+                field.ucd=self.ucds[field.name]
+        VOtable.to_xml(filename)
+
+    
+    def read_VOTable(self,filename):
+        """Read in a polarization spectrum table from a VOTable file.
+        Parameters:
+            filename: str
+                Relative path and name of file to read from."""
+        readin=vot.parse(filename)
+        table=readin.get_first_table()
+        self.table=table.to_table()
+        self.Nrows = len(self.table)
+        self.Nsrc = np.unique(self['source_number']).size
+        self.columns=self.table.dtype.names
+        self.ucds={ field.name:(field.ucd if field.ucd != None else '') for field in (table.fields) }
+        #The slightly fussy list comprehension is because blank UCDs are read as None.
+
+
     def merge_tables(self,table2,merge_type='exact',source_numbers='keep'): 
         """Merge another polarization spectrum table into this one, even if
         the columns aren't identical. User selects how mis-matched columns are
@@ -528,6 +605,13 @@ class polarizationspectra:
         self.Nsrc=len(np.unique(self.table['source_number']))
         self.Nrows=self.Nrows+table2.Nrows
         self.columns=self.table.colnames
+        
+        #UCD handling. If inner or exact, nothing should be done 
+        #   (no harm in extra UCDS if channel is removed).
+        if merge_type == 'outer':
+            for key in table2.ucds:
+                if key not in self.ucds.keys():
+                    self.ucds[key]=table2.ucds[key]
 
         
     
@@ -663,6 +747,16 @@ def from_FITS(filename):
     polspec=polarizationspectra()
     polspec.read_FITS(filename)
     return polspec
+
+def from_VOTable(filename):
+    """Read in a polarization spectrum table from a VOTable file.
+    Parameters:
+        filename: str
+            Relative path and name of file to read from."""
+    polspec=polarizationspectra()
+    polspec.read_VOTable(filename)
+    return polspec
+    
 
 def from_arrays(long_array,lat_array, freq_array, StokesI,StokesI_error,
                  StokesQ,StokesQ_error,StokesU,StokesU_error,source_number_array,

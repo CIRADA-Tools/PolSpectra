@@ -9,7 +9,7 @@ NAME = 'Polspectra'
 DESCRIPTION = 'Reading, writing, and manipulating radio astronomy polarization (Stokes) spectra.'
 URL = 'https://github.com/CIRADA-Tools/PolSpectra'
 REQUIRES_PYTHON = '>=3.5.0'
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 REQUIRED = [
     'numpy', 'astropy',
