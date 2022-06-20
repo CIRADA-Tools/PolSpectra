@@ -54,10 +54,10 @@ class polarizationspectra:
         #             New columns, new functions for quality control and such.
 
     
-    def create_from_arrays(self,long_array,lat_array, freq_array, StokesI,StokesI_error,
-                 StokesQ,StokesQ_error,StokesU,StokesU_error,source_number_array,
-                 beam_major,beam_minor,beam_pa,coordinate_system='icrs',
-                 StokesV=None,StokesV_error=None,quality=None,
+    def create_from_arrays(self,long_array,lat_array, freq_array, stokesI,stokesI_error,
+                 stokesQ,stokesQ_error,stokesU,stokesU_error,source_number_array,
+                 beam_maj,beam_min,beam_pa,coordinate_system='icrs',
+                 stokesV=None,stokesV_error=None,quality=None,
                  quality_meanings=None,ionosphere=None,cat_id=None,dataref=None,
                  telescope=None,epoch=None,integration_time=None,interval=None,
                  leakage=None,channel_width=None,flux_type=None,aperture=None):
@@ -98,7 +98,7 @@ class polarizationspectra:
                             (integers, which indicate how rows are grouped into sources).
                             For example, could run from 0..N_src-1, but is not
                             required to.
-            beam_major,beam_minor,beam_pa: beam parameters as scalars, 1D or 2D
+            beam_maj,beam_min,beam_pa: beam parameters as scalars, 1D or 2D
                         array-likes, in degrees. If scalar, will be expanded out
                         to each row. If 1D, will be assumed to be 1 value per row.                        
             coordinate_system: string containing coordinate system name, as
@@ -107,7 +107,7 @@ class polarizationspectra:
                                'fk4' (B1950), 'fk5' (J2000), 'galactic'
 
         Optional parameters:
-            StokesV[_error]: array-like with Stokes V values and errors.
+            stokesV[_error]: array-like with Stokes V values and errors.
             quality: array-like containing channel quality flags.
             quality_meanings: string or array-like of strings explaining all
                                 possible quality flag codes
@@ -163,27 +163,27 @@ class polarizationspectra:
                             description='Channel Frequency',unit='Hz')
         freq_column[:]=[x for x in freq_2D]
     
-        StokesI_column=at.Column(name='stokesI',dtype='object',shape=(),length=self.Nrows,
+        stokesI_column=at.Column(name='stokesI',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes I per channel')
-        StokesI_column[:]=[x for x in StokesI]
+        stokesI_column[:]=[x for x in stokesI]
 
-        StokesI_error_column=at.Column(name='stokesI_error',shape=(),length=self.Nrows,
-                           dtype='object',description='StokesI error per channel')
-        StokesI_error_column[:]=[x for x in StokesI_error]
+        stokesI_error_column=at.Column(name='stokesI_error',shape=(),length=self.Nrows,
+                           dtype='object',description='stokesI error per channel')
+        stokesI_error_column[:]=[x for x in stokesI_error]
 
-        StokesQ_column=at.Column(name='stokesQ',dtype='object',shape=(),length=self.Nrows,
+        stokesQ_column=at.Column(name='stokesQ',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes Q per channel')
-        StokesQ_column[:]=[x for x in StokesQ]
-        StokesQ_error_column=at.Column(name='stokesQ_error',shape=(),length=self.Nrows,
+        stokesQ_column[:]=[x for x in stokesQ]
+        stokesQ_error_column=at.Column(name='stokesQ_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes Q error per channel')
-        StokesQ_error_column[:]=[x for x in StokesQ_error]
+        stokesQ_error_column[:]=[x for x in stokesQ_error]
 
-        StokesU_column=at.Column(name='stokesU',dtype='object',shape=(),length=self.Nrows,
+        stokesU_column=at.Column(name='stokesU',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes U per channel')
-        StokesU_column[:]=[x for x in StokesU]
-        StokesU_error_column=at.Column(name='stokesU_error',shape=(),length=self.Nrows,
+        stokesU_column[:]=[x for x in stokesU]
+        stokesU_error_column=at.Column(name='stokesU_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes U error per channel')
-        StokesU_error_column[:]=[x for x in StokesU_error]
+        stokesU_error_column[:]=[x for x in stokesU_error]
 
         source_number_column=at.Column(data=source_number_array,name='source_number',
                        dtype='int',description='Source ID number in file',unit='')
@@ -197,16 +197,16 @@ class polarizationspectra:
         #astropy assigns a length), and each element needs to be an array or list
         # (otherwise pyFITS cries). This needs to be done for any column that
         #might be a mixture of single entries and arrays (mixed 1D and 2D).
-        beam_major_column=at.Column(length=self.Nrows,
-               name='beam_major',dtype='object',unit='deg',
+        beam_maj_column=at.Column(length=self.Nrows,
+               name='beam_maj',dtype='object',unit='deg',
                description='Beam major axis in deg')
-        beam_major_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_major,self.Nrows)] 
+        beam_maj_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_maj,self.Nrows)] 
 
         
-        beam_minor_column=at.Column(length=self.Nrows,
-               name='beam_minor',dtype='object',unit='deg',
+        beam_min_column=at.Column(length=self.Nrows,
+               name='beam_min',dtype='object',unit='deg',
                description='Beam minor axis in deg')
-        beam_minor_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_minor,self.Nrows)] 
+        beam_min_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_min,self.Nrows)] 
         
         beam_pa_column=at.Column(length=self.Nrows,
                name='beam_pa',dtype='object',unit='deg',
@@ -226,24 +226,24 @@ class polarizationspectra:
         self.table=at.Table([source_number_column,ra_column,dec_column,
                              glon_column, glat_column,
                              freq_column,
-                             StokesI_column,StokesI_error_column,
-                             StokesQ_column,StokesQ_error_column,
-                             StokesU_column,StokesU_error_column,
-                             beam_major_column,beam_minor_column,beam_pa_column,
+                             stokesI_column,stokesI_error_column,
+                             stokesQ_column,stokesQ_error_column,
+                             stokesU_column,stokesU_error_column,
+                             beam_maj_column,beam_min_column,beam_pa_column,
                              Nchan_column])
         
         
         #Now adding the optional columns:
-        if StokesV is not None: #Check that both Stokes V and error are supplied?
-            StokesV_column=at.Column(name='stokesV',dtype='object',shape=(),length=self.Nrows,
+        if stokesV is not None: #Check that both Stokes V and error are supplied?
+            stokesV_column=at.Column(name='stokesV',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes V per channel')
-            StokesV_column[:]=[x for x in StokesV]
-            self.table.add_column(StokesV_column)
+            stokesV_column[:]=[x for x in stokesV]
+            self.table.add_column(stokesV_column)
 
-            StokesV_error_column=at.Column(name='stokesV_error',shape=(),length=self.Nrows,
+            stokesV_error_column=at.Column(name='stokesV_error',shape=(),length=self.Nrows,
                            dtype='object',description='Stokes V error per channel')
-            StokesV_error_column[:]=[x for x in StokesV_error]
-            self.table.add_column(StokesV_error_column)
+            stokesV_error_column[:]=[x for x in stokesV_error]
+            self.table.add_column(stokesV_error_column)
         
         if quality is not None: #Check quality is 2d?
             quality_column=at.Column(name='quality',dtype='object',shape=(),length=self.Nrows,
@@ -595,12 +595,12 @@ class polarizationspectra:
         """
         
         #Generate a list of of all columns that are channel-wise.
-        channel_columns=['freq','StokesI','StokesI_error','StokesQ',
-                         'StokesQ_error','StokesU','StokesU_error']
-        #Add StokesV, error if present
-        if 'StokesV' in self.table.colnames:
-            channel_columns.append('StokesV')
-            channel_columns.append('StokesV_error')
+        channel_columns=['freq','stokesI','stokesI_error','stokesQ',
+                         'stokesQ_error','stokesU','stokesU_error']
+        #Add stokesV, error if present
+        if 'stokesV' in self.table.colnames:
+            channel_columns.append('stokesV')
+            channel_columns.append('stokesV_error')
         
         badvalues=[]
         for i in range(self.Nrows):
@@ -612,10 +612,10 @@ class polarizationspectra:
         #They are allowed to be either Nchan or 1.
 
         for i in range(self.Nrows):
-            if len(self.table[i]['beam_major']) not in [self.table[i]['Nchan'],1] :
-                badvalues.append(('beam_major',i))
-            if len(self.table[i]['beam_minor']) not in [self.table[i]['Nchan'],1] :
-                badvalues.append(('beam_minor',i))
+            if len(self.table[i]['beam_maj']) not in [self.table[i]['Nchan'],1] :
+                badvalues.append(('beam_maj',i))
+            if len(self.table[i]['beam_min']) not in [self.table[i]['Nchan'],1] :
+                badvalues.append(('beam_min',i))
             if len(self.table[i]['beam_pa']) not in [self.table[i]['Nchan'],1] :
                 badvalues.append(('beam_pa',i))
 
@@ -652,7 +652,7 @@ class polarizationspectra:
                   ' Are they in the correct units (Hz)?')
 
         #Beam size shouldn't be more than a degree, generally
-        if np.max([np.max(x) for x in self.table['beam_major'] ] ) > 1:
+        if np.max([np.max(x) for x in self.table['beam_maj'] ] ) > 1:
             print('Some beam size values are much larger than expected.'
                   'Are they in the correct units (deg)?')
     
@@ -709,19 +709,19 @@ def from_VOTable(filename):
     return polspec
     
 
-def from_arrays(long_array,lat_array, freq_array, StokesI,StokesI_error,
-                 StokesQ,StokesQ_error,StokesU,StokesU_error,source_number_array,
-                 beam_major,beam_minor,beam_pa,coordinate_system='icrs',
-                 StokesV=None,StokesV_error=None,quality=None,
+def from_arrays(long_array,lat_array, freq_array, stokesI,stokesI_error,
+                 stokesQ,stokesQ_error,stokesU,stokesU_error,source_number_array,
+                 beam_maj,beam_min,beam_pa,coordinate_system='icrs',
+                 stokesV=None,stokesV_error=None,quality=None,
                  quality_meanings=None,ionosphere=None,cat_id=None,dataref=None,
                  telescope=None,epoch=None,integration_time=None,interval=None,
                  leakage=None,channel_width=None,flux_type=None,aperture=None):
     
     new_spectra=polarizationspectra()
-    new_spectra.create_from_arrays(long_array,lat_array, freq_array, StokesI,StokesI_error,
-                 StokesQ,StokesQ_error,StokesU,StokesU_error,source_number_array,
-                 beam_major,beam_minor,beam_pa,coordinate_system,
-                 StokesV,StokesV_error,quality,
+    new_spectra.create_from_arrays(long_array,lat_array, freq_array, stokesI,stokesI_error,
+                 stokesQ,stokesQ_error,stokesU,stokesU_error,source_number_array,
+                 beam_maj,beam_min,beam_pa,coordinate_system,
+                 stokesV,stokesV_error,quality,
                  quality_meanings,ionosphere,cat_id,dataref,
                  telescope,epoch,integration_time,interval,
                  leakage,channel_width,flux_type,aperture)
