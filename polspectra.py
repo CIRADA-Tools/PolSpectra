@@ -456,7 +456,7 @@ class polarizationspectra:
                 col_format=pf.column._convert_record2fits(tabcol.dtype)
             else: #Channelized columns
                 subtype=np.result_type(np.array(tabcol[0])) #get the type of each element in 2D array
-                col_format='P'+pf.column._convert_record2fits(subtype)+'()'
+                col_format='Q'+pf.column._convert_record2fits(subtype)+'()'
             if tabcol.unit != None:
                 unit=tabcol.unit.to_string()
             else:
