@@ -473,7 +473,7 @@ class polarizationspectra:
         tablehdu.writeto(filename,overwrite=overwrite)
         
     def write_HDF5(self, filename, overwrite=False, compress=True):
-        """Write the polspectra to a HDF5 file.
+        """Write the polspectra to an HDF5 file.
         Parameters:
             filename : str
                 Name and relative path of the file to save to.
@@ -515,7 +515,7 @@ class polarizationspectra:
                     dset.attrs["description"] = self[col].description
     
     def read_HDF5(self, filename):
-        """Read the polspectra from a HDF5 file.
+        """Read the polspectra from an HDF5 file.
         Parameters:
             filename : str
                 Name and relative path of the file to read from.
