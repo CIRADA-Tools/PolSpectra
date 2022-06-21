@@ -548,7 +548,10 @@ class polarizationspectra:
                 }
                 row["cat_id"] = cat_id
                 self.table.add_row(row)
-
+        self.table["source_number"] = np.arange(len(self.table))
+        self.Nrows=len(cat_ids)
+        self.Nsrc=len(np.unique(self.table['source_number']))
+        self.columns=self.table.colnames
 
     def read_FITS(self,filename):
         """Read in a polarization spectrum table from a FITS file.
