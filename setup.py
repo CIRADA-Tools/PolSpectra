@@ -12,7 +12,7 @@ REQUIRES_PYTHON = '>=3.5.0'
 VERSION = '1.1.0'
 
 REQUIRED = [
-    'numpy', 'astropy',
+    'numpy', 'astropy', 'h5py', 'tqdm',
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
