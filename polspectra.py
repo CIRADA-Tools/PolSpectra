@@ -791,6 +791,14 @@ def from_VOTable(filename):
     polspec.read_VOTable(filename)
     return polspec
     
+def from_HDF5(filename):
+    """Read in a polarization spectrum table from an HDF5 file.
+    Parameters:
+        filename: str
+            Relative path and name of file to read from."""
+    polspec=polarizationspectra()
+    polspec.read_HDF5(filename)
+    return polspec
 
 def from_arrays(long_array,lat_array, freq_array, stokesI,stokesI_error,
                  stokesQ,stokesQ_error,stokesU,stokesU_error,source_number_array,
