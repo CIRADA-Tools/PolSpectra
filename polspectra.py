@@ -9,11 +9,14 @@ selections of the table, merging tables, etc).
 
 """
 
+import os
 import numpy as np
 import astropy.io.fits as pf
 import astropy.table as at
 import astropy.coordinates as ac
 import astropy.io.votable as vot
+import h5py
+from tqdm.auto import tqdm
 
 
 
@@ -469,7 +472,84 @@ class polarizationspectra:
         tablehdu=pf.BinTableHDU.from_columns(fits_columns)
         tablehdu.writeto(filename,overwrite=overwrite)
         
+    def write_HDF5(self, filename, overwrite=False, compress=True):
+        """Write the polspectra to a HDF5 file.
+        Parameters:
+            filename : str
+                Name and relative path of the file to save to.
+            overwrite : bool [False]
+                Overwrite the file if it already exists?
+            compress : bool [True]
+                Compress the data? Uses lzf compression.
+        """
+        if os.path.exists(filename) and not overwrite:
+            raise FileExistsError(
+                f"File {filename} already exists. Use overwrite=True to overwrite."
+            )
+        data_cols = list(self.table.columns)
+        data_cols.remove("cat_id")
+        data_cols.remove("source_number")
+        with h5py.File(filename, "w") as f:
+            grp = f.create_group("polspectra")
+            for row in tqdm(self.table, desc="Writing polspectra to HDF5"):
+                sub_grp = grp.create_group(str(row["cat_id"]))
+                for col in data_cols:
+                    data = row[col]
+                    if type(data) == np.str_:
+                        data = str(data)
+                    # Enable compression if data is ndarray
+                    if type(data) == np.ndarray and compress:
+                        compression="lzf"
+                        shuffle=True
+                    else:
+                        compression=None
+                        shuffle=False
+                    dset = sub_grp.create_dataset(
+                        col, 
+                        data=data, 
+                        compression=compression,
+                        shuffle=shuffle,
+
+                    )
+                    dset.attrs["unit"] = str(self[col].unit)
+                    dset.attrs["description"] = self[col].description
     
+    def read_HDF5(self, filename):
+        """Read the polspectra from a HDF5 file.
+        Parameters:
+            filename : str
+                Name and relative path of the file to read from.
+        """
+        with h5py.File(filename, "r") as f:
+            grp = f["polspectra"]
+            # Init table
+            cat_ids = list(grp.keys())
+            first_row = grp[cat_ids[0]]
+            columns = ["cat_id"] + list(first_row.keys())
+            units = [""] + [first_row[col].attrs["unit"] for col in first_row.keys()]
+            descs = ["Source name"] + [first_row[col].attrs["description"] for col in first_row.keys()]
+            dtypes = [str] + [
+                first_row[col].dtype if first_row[col].shape == ()
+                else object
+                for col in first_row.keys()
+            ]
+            self.table = at.Table(
+                names=columns,
+                units=units,
+                descriptions=descs,
+                dtype=dtypes,
+            )
+            # Fill table row by row
+            for cat_id in tqdm(cat_ids, desc="Reading polspectra from HDF5"):
+                row = {
+                    key: grp[cat_id][key][:] if grp[cat_id][key].shape != () 
+                    else grp[cat_id][key][()]
+                    for key in grp[cat_id].keys()
+                }
+                row["cat_id"] = cat_id
+                self.table.add_row(row)
+
+
     def read_FITS(self,filename):
         """Read in a polarization spectrum table from a FITS file.
         Parameters:
