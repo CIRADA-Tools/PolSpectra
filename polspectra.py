@@ -21,7 +21,7 @@ from tqdm.auto import tqdm
 
 
 class polarizationspectra:
-    """This class defines all the data needed for polarization spectra, along 
+    """This class defines all the data needed for polarization spectra, along
     with all the associated observation metadata.
 
     This is intended to function effectively as a 'table' format: each piece
@@ -32,31 +32,31 @@ class polarizationspectra:
     No sub-class for single rows is being defined, since I don't think it would
     be useful. A single row can exist as a table with one row. Combining rows
     can be accomplished with table concatenation.
-    
+
     This is all built on top of astropy Tables. The main complicating factor is
     that the array columns can have different lengths in different rows. This
     is because different observations (with differing number of frequencies)
     can be concatenated into the same table. To support this, all the array
     columns are turned into 'object' columns, where the object in each row
     is an array of arbitrary length.
-    
+
     Astropy.io.fits has partial support for these kinds of columns, but it takes
     a little finessing to get them to read/write properly. This class has
     functions to take care of that.
-    
+
     """
-    
+
     def __init__(self):
         self.Nrows = 0  #number of rows in the table
         self.Nsrc = 0  #number of unique sources in the table. A useful property
                      #to access for adding new sources with unique numbers.
         self.table=at.Table()  #Empty table.
         self.columns=[]  #A convnient list of column names (as strings)
-        self.table.meta['VERSION']=0.2  
+        self.table.meta['VERSION']=0.2
         #Version 0.2: updated after first round of coauthor comments
         #             New columns, new functions for quality control and such.
 
-    
+
     def create_from_arrays(self,long_array,lat_array, freq_array, stokesI,stokesI_error,
                  stokesQ,stokesQ_error,stokesU,stokesU_error,source_number_array,
                  beam_maj,beam_min,beam_pa,coordinate_system='icrs',
@@ -64,13 +64,13 @@ class polarizationspectra:
                  quality_meanings=None,ionosphere=None,cat_id=None,dataref=None,
                  telescope=None,epoch=None,integration_time=None,interval=None,
                  leakage=None,channel_width=None,flux_type=None,aperture=None):
-        """Inialize a polarized spectrum. Takes in combination of (channel) 
-        arrays, columns, and scalars, for mandatory columns and standard 
-        optional columns. Check parameter descriptions below or the 
+        """Inialize a polarized spectrum. Takes in combination of (channel)
+        arrays, columns, and scalars, for mandatory columns and standard
+        optional columns. Check parameter descriptions below or the
         documentation for full descriptions.
-        2D array-like inputs corresponds to quantities that vary by source and 
+        2D array-like inputs corresponds to quantities that vary by source and
             channel (in that order: source first, then channel)
-            These need to be stored internally as 'object' columns, because the 
+            These need to be stored internally as 'object' columns, because the
             number of channels can vary by source/observation
         1D array-like inputs correspond to quantities that (may) vary by source,
             with one entry per row.
@@ -81,12 +81,12 @@ class polarizationspectra:
         input types are not guaranteed to work.
         It is not the case that every row must have the same number of channels.
         Required Parameters:
-            long_array: array-like object containing Right Ascensions 
+            long_array: array-like object containing Right Ascensions
                         or Galactic longitudes, in decimal degrees.
                         Coordinate system is set with the coordinate_system
                         keyword. Will be converted to ICRS and Galactic for
                         the final table.
-            lat_array: array-like object containing Declinations 
+            lat_array: array-like object containing Declinations
                        or Galactic latitudes, in decimal degrees.
                        Coordinate system is set with the coordinate_system
                        keyword. Will be converted to ICRS and Galactic for
@@ -95,15 +95,15 @@ class polarizationspectra:
                         frequencies, in Hz. If 1D, it is assumed each row
                         has the same frequency channels, and it will be expanded
                         out to a 2D array.
-            Stokes[I/Q/U][_error]: 2D (source x channel) array-likes  
+            Stokes[I/Q/U][_error]: 2D (source x channel) array-likes
                         containing Stokes parameter values and their errors.
-            source_number_array: array_like object containing source numbers 
+            source_number_array: array_like object containing source numbers
                             (integers, which indicate how rows are grouped into sources).
                             For example, could run from 0..N_src-1, but is not
                             required to.
             beam_maj,beam_min,beam_pa: beam parameters as scalars, 1D or 2D
                         array-likes, in degrees. If scalar, will be expanded out
-                        to each row. If 1D, will be assumed to be 1 value per row.                        
+                        to each row. If 1D, will be assumed to be 1 value per row.
             coordinate_system: string containing coordinate system name, as
                                recognized by astropy.coordinates. Defaults
                                to 'icrs', common alternatives include
@@ -119,25 +119,25 @@ class polarizationspectra:
             epoch: scalar or array-like of (midpoint) time of observation (MJD)
             integration_time: scalar or array-like of duration of observation (in seconds)
             interval: scalar or array-like of interval of observation (in days)
-            leakage: scalar, 1D or 2D array-like of estimated leakage from 
+            leakage: scalar, 1D or 2D array-like of estimated leakage from
                     Stokes I into Q and U, as a fraction of Stokes I.
             channel_width: scalar, 1D or 2D array_like of channel widths (in Hz)
             flux_type: scalar or 1D array-like of strings describing how the
                         Stokes spectra were extracted (peak pixel, integrated, fit, etc)
-            aperture: scalar or array-like, diameter/length of the averaging 
+            aperture: scalar or array-like, diameter/length of the averaging
                     region used to determine the source spectra (in degrees)
             """
 
 
-                 
-        
+
+
         self.Nrows=len(long_array)
         #If different columns have different numbers of rows, table creation
         #will fail. So no explicit check of vector length is needed.
-        
+
         #Convert coordinates into ICRS and Galactic:
         coordinates=ac.SkyCoord(long_array,lat_array,
-                                frame=coordinate_system,unit='deg')        
+                                frame=coordinate_system,unit='deg')
         ra_column=at.Column(data=coordinates.icrs.ra.deg,name='ra',
                             description='Right Ascension',unit='deg')
         dec_column=at.Column(data=coordinates.icrs.dec.deg,name='dec',
@@ -146,9 +146,9 @@ class polarizationspectra:
                             description='Galactic Longitude',unit='deg')
         glat_column=at.Column(data=coordinates.galactic.b.deg,name='b',
                             description='Galactic Latitude',unit='deg')
-        
-        
-        #frequency array may be 1D (if all sources have same channels), 
+
+
+        #frequency array may be 1D (if all sources have same channels),
         #and must support expansion to 2D as needed.
         if _get_dimensionality(freq_array) == 2:
             freq_2D=freq_array
@@ -156,8 +156,8 @@ class polarizationspectra:
             freq_2D=[freq_array for i in range(self.Nrows)]
         else:
             raise Exception('Frequency column must be channel-wise: at least 1D array!')
-        
-        
+
+
         #This gets a bit fussy. To allow mergers of heterogenous tables down the line,
         #it is necessary to ensure that the column headers know absolutely NOTHING
         # about the number of channels. The list comprehension is necesary to pass
@@ -165,7 +165,7 @@ class polarizationspectra:
         freq_column=at.Column(name='freq',dtype='object',shape=(),length=self.Nrows,
                             description='Channel Frequency',unit='Hz')
         freq_column[:]=[x for x in freq_2D]
-    
+
         stokesI_column=at.Column(name='stokesI',dtype='object',shape=(),length=self.Nrows,
                             description='Stokes I per channel')
         stokesI_column[:]=[x for x in stokesI]
@@ -203,18 +203,18 @@ class polarizationspectra:
         beam_maj_column=at.Column(length=self.Nrows,
                name='beam_maj',dtype='object',unit='deg',
                description='Beam major axis in deg')
-        beam_maj_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_maj,self.Nrows)] 
+        beam_maj_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_maj,self.Nrows)]
 
-        
+
         beam_min_column=at.Column(length=self.Nrows,
                name='beam_min',dtype='object',unit='deg',
                description='Beam minor axis in deg')
-        beam_min_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_min,self.Nrows)] 
-        
+        beam_min_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_min,self.Nrows)]
+
         beam_pa_column=at.Column(length=self.Nrows,
                name='beam_pa',dtype='object',unit='deg',
                description='Beam position angle in deg')
-        beam_pa_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_pa,self.Nrows)] 
+        beam_pa_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(beam_pa,self.Nrows)]
 
 
 
@@ -234,8 +234,8 @@ class polarizationspectra:
                              stokesU_column,stokesU_error_column,
                              beam_maj_column,beam_min_column,beam_pa_column,
                              Nchan_column])
-        
-        
+
+
         #Now adding the optional columns:
         if stokesV is not None: #Check that both Stokes V and error are supplied?
             stokesV_column=at.Column(name='stokesV',dtype='object',shape=(),length=self.Nrows,
@@ -247,7 +247,7 @@ class polarizationspectra:
                            dtype='object',description='Stokes V error per channel')
             stokesV_error_column[:]=[x for x in stokesV_error]
             self.table.add_column(stokesV_error_column)
-        
+
         if quality is not None: #Check quality is 2d?
             quality_column=at.Column(name='quality',dtype='object',shape=(),length=self.Nrows,
                             description='Quality flags per channel')
@@ -260,14 +260,14 @@ class polarizationspectra:
                         name='quality_meanings',dtype='str',
                         description='Description of quality flag meanings')
             self.table.add_column(quality_meanings_column)
-            
+
         if ionosphere is not None:
             ionosphere_column=at.Column(
                         data=_possible_scalar_to_1D(ionosphere,self.Nrows),
                         name='ionosphere',dtype='str',
                         description='Ionospheric correction method')
             self.table.add_column(ionosphere_column)
-        
+
 
         if cat_id is not None:
             source_name_column=at.Column(data=cat_id,name='cat_id',dtype='str',
@@ -279,7 +279,7 @@ class polarizationspectra:
                                          name='dataref',dtype='str',
                             description='Reference to data paper')
             self.table.add_column(dataref_column)
-            
+
         if telescope is not None:
             telescope_column=at.Column(
                         data=_possible_scalar_to_1D(telescope,self.Nrows),
@@ -293,14 +293,14 @@ class polarizationspectra:
                         name='epoch',dtype='float',
                         description='Observation Epoch (midpoint, MJD)',unit='d')
             self.table.add_column(epoch_column)
-        
+
         if integration_time is not None:
             integration_time_column=at.Column(
                         data=_possible_scalar_to_1D(integration_time,self.Nrows),
                         name='integration_time',dtype='float',
                         description='Integration time (observation duration, s)',unit='s')
             self.table.add_column(integration_time_column)
-            
+
         if interval is not None:
             interval_column=at.Column(
                         data=_possible_scalar_to_1D(interval,self.Nrows),
@@ -314,7 +314,7 @@ class polarizationspectra:
              leakage_column=at.Column(length=self.Nrows,
                         name='leakage',dtype='object',unit='',
                         description='Estimated leakage fraction')
-             leakage_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(leakage,self.Nrows)] 
+             leakage_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(leakage,self.Nrows)]
              self.table.add_column(leakage_column)
 
 
@@ -324,7 +324,7 @@ class polarizationspectra:
                         data=_possible_scalar_to_1D(channel_width,self.Nrows),
                         name='channel_width',dtype='object',unit='Hz',
                         description='Channel bandwidth [Hz]')
-             channel_width_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(channel_width,self.Nrows)] 
+             channel_width_column[:]=[ [x] if np.array(x).ndim == 0 else x for x in _possible_scalar_to_1D(channel_width,self.Nrows)]
              self.table.add_column(channel_width_column)
 
 
@@ -343,17 +343,17 @@ class polarizationspectra:
                         description='Integration aperture (diameter, deg)')
             self.table.add_column(aperture_column)
 
-        #Set list of column names.        
+        #Set list of column names.
         self.columns=self.table.colnames
         #Done!
-           
-        
+
+
     def add_column(self,values,name,description,units=''):
         """Add a column with a single value per row, or a scalar.
         Parameters:
             values : scalar or array-like
                 value(s) for the column to hold
-            name : str 
+            name : str
                 Column name and key for reference within table
             description : str
                 Description of the column contents (human readable)
@@ -374,7 +374,7 @@ class polarizationspectra:
         Parameters:
             values : 2D array-like
                 value(s) for the column to hold
-            name : str 
+            name : str
                 Column name and key for reference within table
             description : str
                 Description of the column contents (human readable)
@@ -387,19 +387,19 @@ class polarizationspectra:
         for i in range(self.Nrows):
             if len(values[i]) != self['Nchan'][i]:
                 raise Exception("New column doesn't have same number of channels as rest of table, on row {}.".format(i))
-        
+
         new_column=at.Column(length=self.Nrows,
                         name=name,unit=units,dtype='object',
                         description=description)
         new_column[:]=[x for x in values]
-        self.table.add_column(new_column)        
+        self.table.add_column(new_column)
         self.columns=self.table.colnames
 
 
     def __repr__(self):
         #pass through directly to the table
         return self.table.__repr__()
-    
+
     def _repr_html_(self):
         return self.table._repr_html_()
 
@@ -407,12 +407,12 @@ class polarizationspectra:
     def __str__(self):
         #pass through directly to the table
         return self.table.__str__()
-    
+
     def __len__(self):
         return self.Nrows
-    
+
     def __getitem__(self,key):
-        """Depending on type of key, returns column, or polarizationspectra 
+        """Depending on type of key, returns column, or polarizationspectra
         with selected rows.
         Generally passes item selection through to the underlying table,
         except for single row access (which is converted to a one-row polarizationspectra)
@@ -420,7 +420,7 @@ class polarizationspectra:
 
         if isinstance(key, (int, np.integer)):
             key=[key,]
-        
+
         val=self.table[key]
         if isinstance(val,at.table.Table):
             polspec=polarizationspectra()
@@ -451,7 +451,7 @@ class polarizationspectra:
         # Is that important?
         fits_columns=[]
         col_descriptions=[]
-        
+
         #per column, convert to fits column:
         for col in self.table.colnames:
             tabcol=self.table[col]
@@ -468,10 +468,10 @@ class polarizationspectra:
                             array=tabcol.data,format=col_format)
             fits_columns.append(pfcol)
             col_descriptions.append(tabcol.description)
-        
+
         tablehdu=pf.BinTableHDU.from_columns(fits_columns)
         tablehdu.writeto(filename,overwrite=overwrite)
-        
+
     def write_HDF5(self, filename, overwrite=False, compress=True):
         """Write the polspectra to an HDF5 file.
         Parameters:
@@ -505,15 +505,15 @@ class polarizationspectra:
                         compression=None
                         shuffle=False
                     dset = sub_grp.create_dataset(
-                        col, 
-                        data=data, 
+                        col,
+                        data=data,
                         compression=compression,
                         shuffle=shuffle,
 
                     )
                     dset.attrs["unit"] = str(self[col].unit)
-                    dset.attrs["description"] = self[col].description
-    
+                    dset.attrs["description"] = str(self[col].description)
+
     def read_HDF5(self, filename):
         """Read the polspectra from an HDF5 file.
         Parameters:
@@ -542,7 +542,7 @@ class polarizationspectra:
             # Fill table row by row
             for cat_id in tqdm(cat_ids, desc="Reading polspectra from HDF5"):
                 row = {
-                    key: grp[cat_id][key][:] if grp[cat_id][key].shape != () 
+                    key: grp[cat_id][key][:] if grp[cat_id][key].shape != ()
                     else grp[cat_id][key][()]
                     for key in grp[cat_id].keys()
                 }
@@ -567,13 +567,13 @@ class polarizationspectra:
         for i in range(1,header['TFIELDS']+1):
             if 'TUNIT{}'.format(i) in header.keys():
                 self.table[header['TTYPE{}'.format(i)]].unit=header['TUNIT{}'.format(i)]
-        
+
         self.Nrows=len(data)
         self.Nsrc=len(np.unique(self.table['source_number']))
         self.columns=self.table.colnames
 
         hdu.close()
-        
+
 
 
     def write_VOTable(self,filename):
@@ -582,7 +582,7 @@ class polarizationspectra:
         Parameters:
             filename : str
             Name and relative path of the file to save to.
-        
+
         """
         VOtable=vot.from_table(self.table)
         VOtable.description='PolSpectra'
@@ -590,7 +590,7 @@ class polarizationspectra:
         tab=VOtable.get_first_table()
         VOtable.to_xml(filename)
 
-    
+
     def read_VOTable(self,filename):
         """Read in a polarization spectrum table from a VOTable file.
         Parameters:
@@ -604,16 +604,16 @@ class polarizationspectra:
         self.columns=self.table.dtype.names
 
 
-    def merge_tables(self,table2,merge_type='exact',source_numbers='keep'): 
+    def merge_tables(self,table2,merge_type='exact',source_numbers='keep'):
         """Merge another polarization spectrum table into this one, even if
         the columns aren't identical. User selects how mis-matched columns are
         integrated using the merge_type parameter:
             'exact': all column names/types must match exactly.
             'outer': all columns are kept; missing values are masked out.
             'inner': only columns common to both inputs are kept.
-            
+
         Parameters:
-            table2 : polarizationspectra object: 
+            table2 : polarizationspectra object:
                 the second table to be added to this one.
             merge_type : str (only accepted values are 'inner','exact','outer')
                 Desired behaviour for dealing with mis-matched columns.
@@ -622,7 +622,7 @@ class polarizationspectra:
                 'keep' does not change the source_number column at all; this
                     is desireable if you want to combine different observations
                     of the same source(s).
-                'concat' shifts the source numbers of the new rows up to be 
+                'concat' shifts the source numbers of the new rows up to be
                     unique; this is desireable if you want to combine different
                     sources together but haven't manually set the source numbers
                     to be distinct.
@@ -634,7 +634,7 @@ class polarizationspectra:
             raise Exception('Incorrect option given for merge_type in table merging')
 
         add_table=table2.table.copy() #Copy the 2nd table to avoid accidently writing to it.
-        if source_numbers == 'concat': #Reset the numbering in the 2nd table 
+        if source_numbers == 'concat': #Reset the numbering in the 2nd table
             #so that continues where the 1st table ends. Doesn't prevent gaps!
             add_table['source_number']=(add_table['source_number']-
                 np.min(add_table['source_number'])+np.max(self.table['source_number'])+1 )
@@ -645,10 +645,10 @@ class polarizationspectra:
         self.Nsrc=len(np.unique(self.table['source_number']))
         self.Nrows=self.Nrows+table2.Nrows
         self.columns=self.table.colnames
-        
 
-        
-    
+
+
+
     def renumber_sources(self):
         """Re-orders the source_number column to be consecutive numbers from
         0 to N_src-1. Useful when extracting a subset of sources."""
@@ -658,7 +658,7 @@ class polarizationspectra:
         for i in range(len(source_numbers)):
             w=np.where(old_source_number_column == source_numbers[i])
             self.table['source_number'][w] = i
-            
+
     def copy(self):
         """Returns a copy of the current instance."""
         new_copy=polarizationspectra()
@@ -667,16 +667,16 @@ class polarizationspectra:
         new_copy.Nsrc=self.Nsrc
         new_copy.columns=new_copy.table.colnames
         return new_copy
-    
-    
+
+
     def verify_table(self):
-        """Checks for most common possible problems that could occur when 
+        """Checks for most common possible problems that could occur when
         generating a PolSpecta table:
             1. Inconsistent number of channels for columns in a single row.
             2. Unit-mismatches (frequencies not in Hz, beam size not in deg, etc)
         Can't check custom columns; only verifies standard columns.'
         """
-        
+
         #Generate a list of of all columns that are channel-wise.
         channel_columns=['freq','stokesI','stokesI_error','stokesQ',
                          'stokesQ_error','stokesU','stokesU_error']
@@ -684,7 +684,7 @@ class polarizationspectra:
         if 'stokesV' in self.table.colnames:
             channel_columns.append('stokesV')
             channel_columns.append('stokesV_error')
-        
+
         badvalues=[]
         for i in range(self.Nrows):
             for column in channel_columns:
@@ -718,7 +718,7 @@ class polarizationspectra:
 
 
 
-        
+
         if len(badvalues) == 0:
             print('All columns have consistent numbers of channels.')
         else:
@@ -728,7 +728,7 @@ class polarizationspectra:
 
         #Check for unit mismatches, by flagging values that are several
         #orders of magnitude larger/smaller than expected.
-        
+
         #Frequency shouldn't be below 1 MHz, I expect, so check for small frequencies
         if np.min([np.min(x) for x in self.table['freq'] ] ) < 1e6:
             print('Some frequency values are much smaller than expected.'
@@ -738,20 +738,20 @@ class polarizationspectra:
         if np.max([np.max(x) for x in self.table['beam_maj'] ] ) > 1:
             print('Some beam size values are much larger than expected.'
                   'Are they in the correct units (deg)?')
-    
-    
-    
+
+
+
     def crossmatch_sources(self,radius,consecutive=True):
         """Groups together sources (by giving them the same source_number)
         based on position crossmatching, using a user-supplied crossmatch
         radius. Modifies the source_number column in-place.
-        Note that it if the radius is large is possible to 'chain together' 
+        Note that it if the radius is large is possible to 'chain together'
         sources such that each group member is close enough to at least one
         other, but not necessarily to all others.
         Inputs:
             radius (float): cross-matching radius in degrees. Sources closer than
                     this radius will be grouped.
-            consecutive (bool): Renumber sources to be consecutive from 0 to 
+            consecutive (bool): Renumber sources to be consecutive from 0 to
                                 N_src-1. If false, source numbers will be kept
                                 as-is (after grouping).
         """
@@ -765,13 +765,13 @@ class polarizationspectra:
             w=np.where(sep.deg < radius)[0]
             if w.size > 0:
                 self.table['source_number'][w+i+1]=self.table['source_number'][i]
-                
+
         if consecutive == True:
             self.renumber_sources()
-            
+
         self.Nsrc=len(np.unique(self.table['source_number']))
-    
-        
+
+
 
 def from_FITS(filename):
     """Read in a polarization spectrum table from a FITS file.
@@ -790,7 +790,7 @@ def from_VOTable(filename):
     polspec=polarizationspectra()
     polspec.read_VOTable(filename)
     return polspec
-    
+
 def from_HDF5(filename):
     """Read in a polarization spectrum table from an HDF5 file.
     Parameters:
@@ -807,7 +807,7 @@ def from_arrays(long_array,lat_array, freq_array, stokesI,stokesI_error,
                  quality_meanings=None,ionosphere=None,cat_id=None,dataref=None,
                  telescope=None,epoch=None,integration_time=None,interval=None,
                  leakage=None,channel_width=None,flux_type=None,aperture=None):
-    
+
     new_spectra=polarizationspectra()
     new_spectra.create_from_arrays(long_array,lat_array, freq_array, stokesI,stokesI_error,
                  stokesQ,stokesQ_error,stokesU,stokesU_error,source_number_array,
@@ -835,7 +835,7 @@ def _possible_scalar_to_1D(scalar,Nrows):
         column=[scalar for i in range(Nrows)]
     return column
 
-    
+
 def _get_dimensionality(column):
     """This function determines the dimensionality of a variable, to see if
     it contains scalar, 1D, or 2D data. Current version fails on strings."""
@@ -847,7 +847,7 @@ def _get_dimensionality(column):
         except: return 1
     except:
         return 0
-    
+
 
 
 
